@@ -45,12 +45,7 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
     def __init__(self):
         self.currentEntity = None
         self.inAttributeValue = False
-        self.includeEntities = list()
-
-    def endDocument(self):
-        self.includeEntities.sort()
-        for entity in self.includeEntities:
-            print entity.toXML()
+        self.includeEntities = set()
 
     def startElement(self, name, attrs):
         if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
@@ -79,7 +74,7 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
 
     def closeEntity(self):
         if self.currentEntity.isValid():
-            self.includeEntities.append(self.currentEntity)
+            self.includeEntities.add(self.currentEntity.entityID)
         self.currentEntity = None
 
 
@@ -118,11 +113,16 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
 
 
 if __name__ == '__main__':
-    handler = InCommonHandler()
+    icHandler = InCommonHandler()
     errorHandler = RaiseErrorHandler()
-    #xml.sax.parse(sys.argv[1], handler, errorHandler)
-    handler = ShibbolethHandler()
-    xml.sax.parse(sys.argv[2], handler, errorHandler)
-    print 'Found %d included entities' % (len(handler.includedEntities))
+    xml.sax.parse(sys.argv[1], icHandler, errorHandler)
+    print 'Found %d entities to include' % (len(icHandler.includeEntities))
+    shibHandler = ShibbolethHandler()
+    xml.sax.parse(sys.argv[2], shibHandler, errorHandler)
+    print 'Found %d included entities' % (len(shibHandler.includedEntities))
+    addEntities = icHandler.includeEntities - shibHandler.includedEntities
+    removeEntities = shibHandler.includedEntities - icHandler.includeEntities
+    print 'Remove these: %r' % (removeEntities)
+    print 'Add these: %r' % (addEntities)
 
 # xml.sax.parse('InCommon-metadata-preview.xml', handler)
