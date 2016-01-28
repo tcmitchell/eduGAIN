@@ -1,8 +1,11 @@
 import sys
 import xml.sax
 
-# Need error handling - see ErrorHandler objects in xml.sax
+#----------------------------------------------------------------------
+# To Do:
+#
 # Handle hide-from-discovery IdPs
+#----------------------------------------------------------------------
 
 class Entity(object):
     def __init__(self, id):
@@ -15,18 +18,21 @@ class Entity(object):
         return self.isIDP and self.isInCommon and not self.hideFromDiscovery
 
 
-class EduGainErrorHandler(xml.sax.handler.ErrorHandler):
+class RaiseErrorHandler(xml.sax.handler.ErrorHandler):
+    """Raises all errors as exceptions to halt processing.
+    Warnings are ignored.
+    """
     def __init__(self):
         pass
     def error(self, exception):
-        pass
+        raise exception
     def fatalError(self, exception):
-        pass
+        raise exception
     def warning(self, exception):
         pass
 
 
-class EduGainHandler(xml.sax.handler.ContentHandler):
+class InCommonHandler(xml.sax.handler.ContentHandler):
     ENTITY_DESCRIPTOR = u'EntityDescriptor'
     ATTRIBUTE_VALUE = u'AttributeValue'
     IDP_DESCRIPTOR = u'IDPSSODescriptor'
@@ -46,28 +52,28 @@ class EduGainHandler(xml.sax.handler.ContentHandler):
             print '<Include>%s</Include>' % (entity)
 
     def startElement(self, name, attrs):
-        if name.endswith(EduGainHandler.ENTITY_DESCRIPTOR):
+        if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
             if self.currentEntity:
                 print 'ERROR: currentEntity already defined'
             # print 'startElement(%r, %r)' % (name, attrs)
             entityID = attrs.getValue('entityID')
             #print 'entity: %s' % (entityID)
             self.currentEntity = entityID
-        elif name.endswith(EduGainHandler.ATTRIBUTE_VALUE):
+        elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
             #print 'attribute value'
             self.inAttributeValue = True
-        elif name.endswith(EduGainHandler.IDP_DESCRIPTOR):
+        elif name.endswith(InCommonHandler.IDP_DESCRIPTOR):
             self.isIDP = True
 
     def endElement(self, name):
-        if name.endswith(EduGainHandler.ENTITY_DESCRIPTOR):
+        if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
             #print 'endElement(%r)' % (name)
             self.closeEntity()
-        elif name.endswith(EduGainHandler.ATTRIBUTE_VALUE):
+        elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
             self.inAttributeValue = False
 
     def characters(self, content):
-        if self.inAttributeValue and content == EduGainHandler.REG_INCOMMON:
+        if self.inAttributeValue and content == InCommonHandler.REG_INCOMMON:
             self.isInCommon = True
 
     def closeEntity(self):
@@ -79,7 +85,8 @@ class EduGainHandler(xml.sax.handler.ContentHandler):
 
 
 if __name__ == '__main__':
-    handler = EduGainHandler()
-    xml.sax.parse(sys.argv[1], handler)
+    handler = InCommonHandler()
+    errorHandler = RaiseErrorHandler()
+    xml.sax.parse(sys.argv[1], handler, errorHandler)
 
 # xml.sax.parse('InCommon-metadata-preview.xml', handler)
