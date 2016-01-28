@@ -78,14 +78,51 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
             self.currentEntity.isInCommon = True
 
     def closeEntity(self):
-        if self.currentEntity.isValid:
+        if self.currentEntity.isValid():
             self.includeEntities.append(self.currentEntity)
         self.currentEntity = None
+
+
+class ShibbolethHandler(xml.sax.handler.ContentHandler):
+    """Parse a shibboleth2.xml file and gather the whitelist
+    include entities.
+    """
+    METADATA_FILTER = u'MetadataFilter'
+    INCLUDE = u'Include'
+    ATTR_TYPE = u'type'
+    VALUE_WHITELIST = u'Whitelist'
+
+    def __init__(self):
+        self.inWhitelist = False
+        self.inInclude = False
+        self.includedEntities = set()
+
+    def startElement(self, name, attrs):
+        if (name.endswith(ShibbolethHandler.METADATA_FILTER)
+                and ShibbolethHandler.ATTR_TYPE in attrs.getNames()
+                and (attrs.getValue(ShibbolethHandler.ATTR_TYPE)
+                         == ShibbolethHandler.VALUE_WHITELIST)):
+            self.inWhitelist = True
+        elif self.inWhitelist and name.endswith(ShibbolethHandler.INCLUDE):
+            self.inInclude = True
+
+    def endElement(self, name):
+        if self.inWhitelist and name.endswith(ShibbolethHandler.METADATA_FILTER):
+            self.inWhitelist = False
+        elif self.inInclude and name.endswith(ShibbolethHandler.INCLUDE):
+            self.inInclude = False
+
+    def characters(self, content):
+        if self.inWhitelist and self.inInclude:
+            self.includedEntities.add(content)
 
 
 if __name__ == '__main__':
     handler = InCommonHandler()
     errorHandler = RaiseErrorHandler()
-    xml.sax.parse(sys.argv[1], handler, errorHandler)
+    #xml.sax.parse(sys.argv[1], handler, errorHandler)
+    handler = ShibbolethHandler()
+    xml.sax.parse(sys.argv[2], handler, errorHandler)
+    print 'Found %d included entities' % (len(handler.includedEntities))
 
 # xml.sax.parse('InCommon-metadata-preview.xml', handler)
