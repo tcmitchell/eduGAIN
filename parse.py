@@ -17,6 +17,9 @@ class Entity(object):
     def isValid(self):
         return self.isIDP and self.isInCommon and not self.hideFromDiscovery
 
+    def toXML(self):
+        return '<Include>%s</Include>' % (self.entityID)
+
 
 class RaiseErrorHandler(xml.sax.handler.ErrorHandler):
     """Raises all errors as exceptions to halt processing.
@@ -42,14 +45,12 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
     def __init__(self):
         self.currentEntity = None
         self.inAttributeValue = False
-        self.isIDP = False
-        self.isInCommon = False
         self.includeEntities = list()
 
     def endDocument(self):
         self.includeEntities.sort()
         for entity in self.includeEntities:
-            print '<Include>%s</Include>' % (entity)
+            print entity.toXML()
 
     def startElement(self, name, attrs):
         if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
@@ -58,12 +59,12 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
             # print 'startElement(%r, %r)' % (name, attrs)
             entityID = attrs.getValue('entityID')
             #print 'entity: %s' % (entityID)
-            self.currentEntity = entityID
+            self.currentEntity = Entity(entityID)
         elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
             #print 'attribute value'
             self.inAttributeValue = True
         elif name.endswith(InCommonHandler.IDP_DESCRIPTOR):
-            self.isIDP = True
+            self.currentEntity.isIDP = True
 
     def endElement(self, name):
         if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
@@ -74,14 +75,12 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
 
     def characters(self, content):
         if self.inAttributeValue and content == InCommonHandler.REG_INCOMMON:
-            self.isInCommon = True
+            self.currentEntity.isInCommon = True
 
     def closeEntity(self):
-        if self.currentEntity and self.isIDP and self.isInCommon:
+        if self.currentEntity.isValid:
             self.includeEntities.append(self.currentEntity)
         self.currentEntity = None
-        self.isIDP = False
-        self.isInCommon = False
 
 
 if __name__ == '__main__':
