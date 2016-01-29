@@ -1,12 +1,18 @@
+import smtplib
 import sys
 import xml.sax
+from email.mime.text import MIMEText
 
 #----------------------------------------------------------------------
 # To Do:
 #
 # Handle hide-from-discovery IdPs
 #----------------------------------------------------------------------
-
+#
+# python parse.py /var/run/shibboleth/InCommon-metadata.xml \
+#                /etc/shibboleth/shibboleth2.xml
+#
+#----------------------------------------------------------------------
 class Entity(object):
     def __init__(self, id):
         self.entityID = id
@@ -112,17 +118,53 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
             self.includedEntities.add(content)
 
 
+def sendReport(from_addr, to_addrs, subject, body):
+    """Send the report about adjusting the Shibboleth configuration.
+
+    """
+    if isinstance(to_addrs, basestring):
+        to_addrs = [to_addrs]
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = ", ".join(to_addrs)
+    # print msg.as_string()
+    s = smtplib.SMTP('localhost')
+    s.sendmail(from_addr, to_addrs, msg.as_string())
+    s.quit()
+
+def createReport(actual, desired):
+    """Compares the sets actual and desired and reports how actual needs
+    to be adjusted to conform to desired. The report text is suitable for
+    emailing to an admin who can make the adjustments.
+    """
+    addList = sorted(desired - actual)
+    removeList = sorted(actual - desired)
+    report = ''
+    if addList:
+        report = report + 'Add these:\n'
+        for add in addList:
+            report = report + '\t%s\n' % (add)
+        report = report + '\n'
+    if removeList:
+        report = report + 'Remove these:\n'
+        for remove in removeList:
+            report = report + '\t%s\n' % (remove)
+        report = report + '\n'
+    return report
+
+
 if __name__ == '__main__':
     icHandler = InCommonHandler()
     errorHandler = RaiseErrorHandler()
     xml.sax.parse(sys.argv[1], icHandler, errorHandler)
-    print 'Found %d entities to include' % (len(icHandler.includeEntities))
     shibHandler = ShibbolethHandler()
     xml.sax.parse(sys.argv[2], shibHandler, errorHandler)
-    print 'Found %d included entities' % (len(shibHandler.includedEntities))
-    addEntities = icHandler.includeEntities - shibHandler.includedEntities
-    removeEntities = shibHandler.includedEntities - icHandler.includeEntities
-    print 'Remove these: %r' % (removeEntities)
-    print 'Add these: %r' % (addEntities)
+    actualEntities = shibHandler.includedEntities
+    desiredEntities = icHandler.includeEntities
+    report = createReport(actualEntities, desiredEntities)
+    # print report
+    sendReport('tmitchel@bbn.com', 'tmitchel@bbn.com', 'InCommon IdP report',
+               report)
 
 # xml.sax.parse('InCommon-metadata-preview.xml', handler)
