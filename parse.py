@@ -77,6 +77,8 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
     def characters(self, content):
         if self.inAttributeValue and content == InCommonHandler.REG_INCOMMON:
             self.currentEntity.isInCommon = True
+        if self.inAttributeValue and content == InCommonHandler.HIDE_DISCOVERY:
+            self.currentEntity.hideFromDiscovery = True
 
     def closeEntity(self):
         if self.currentEntity.isValid():
