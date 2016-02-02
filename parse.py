@@ -88,18 +88,27 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
     """Parse a shibboleth2.xml file and gather the whitelist
     include entities.
     """
+    METADATA_PROVIDER = u'MetadataProvider'
     METADATA_FILTER = u'MetadataFilter'
     INCLUDE = u'Include'
+    ATTR_URI = u'uri'
     ATTR_TYPE = u'type'
     VALUE_WHITELIST = u'Whitelist'
+    INCOMMON_URI = u'http://md.incommon.org/InCommon/InCommon-metadata.xml'
 
     def __init__(self):
+        self.inIncommon = False
         self.inWhitelist = False
         self.inInclude = False
         self.includedEntities = set()
 
     def startElement(self, name, attrs):
-        if (name.endswith(ShibbolethHandler.METADATA_FILTER)
+        if (name.endswith(ShibbolethHandler.METADATA_PROVIDER)
+            and ShibbolethHandler.ATTR_URI in attrs.getNames()
+            and (attrs.getValue(ShibbolethHandler.ATTR_URI)
+                 == ShibbolethHandler.INCOMMON_URI)):
+            self.inIncommon = True
+        elif (name.endswith(ShibbolethHandler.METADATA_FILTER)
                 and ShibbolethHandler.ATTR_TYPE in attrs.getNames()
                 and (attrs.getValue(ShibbolethHandler.ATTR_TYPE)
                          == ShibbolethHandler.VALUE_WHITELIST)):
@@ -108,13 +117,15 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
             self.inInclude = True
 
     def endElement(self, name):
-        if self.inWhitelist and name.endswith(ShibbolethHandler.METADATA_FILTER):
+        if self.inIncommon and name.endswith(ShibbolethHandler.METADATA_PROVIDER):
+            self.inIncommon = False
+        elif self.inWhitelist and name.endswith(ShibbolethHandler.METADATA_FILTER):
             self.inWhitelist = False
         elif self.inInclude and name.endswith(ShibbolethHandler.INCLUDE):
             self.inInclude = False
 
     def characters(self, content):
-        if self.inWhitelist and self.inInclude:
+        if self.inIncommon and self.inWhitelist and self.inInclude:
             self.includedEntities.add(content)
 
 
