@@ -64,6 +64,7 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
         elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
             #print 'attribute value'
             self.inAttributeValue = True
+            self.AVcontent = ''
         elif name.endswith(InCommonHandler.IDP_DESCRIPTOR):
             self.currentEntity.isIDP = True
 
@@ -72,13 +73,18 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
             #print 'endElement(%r)' % (name)
             self.closeEntity()
         elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
+            if self.AVcontent and self.AVcontent == InCommonHandler.REG_INCOMMON:
+                self.currentEntity.isInCommon = True
+            if self.AVcontent and self.AVcontent == InCommonHandler.HIDE_DISCOVERY:
+                self.currentEntity.hideFromDiscovery = True
+            self.AVcontent = ''
             self.inAttributeValue = False
 
     def characters(self, content):
-        if self.inAttributeValue and content == InCommonHandler.REG_INCOMMON:
-            self.currentEntity.isInCommon = True
-        if self.inAttributeValue and content == InCommonHandler.HIDE_DISCOVERY:
-            self.currentEntity.hideFromDiscovery = True
+        # Accumulate the content because it may not arrive at one time,
+        # but over separate calls. See the xml.sax docs for more info.
+        if self.inAttributeValue:
+            self.AVcontent = self.AVcontent + content
 
     def closeEntity(self):
         if self.currentEntity.isValid():
