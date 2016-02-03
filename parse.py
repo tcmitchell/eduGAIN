@@ -186,7 +186,12 @@ if __name__ == '__main__':
     desiredEntities = icHandler.includeEntities
     report = createReport(actualEntities, desiredEntities)
     # print report
-    sendReport('tmitchel@bbn.com', 'tmitchel@bbn.com', 'InCommon IdP report',
-               report)
+    if report:
+        sendReport('tmitchel@bbn.com', 'tmitchel@bbn.com',
+                   'InCommon IdP report', report)
+    else:
+        sendReport('tmitchel@bbn.com', 'tmitchel@bbn.com',
+                   'InCommon IdP report', 'Nothing to update')
+
 
 # xml.sax.parse('InCommon-metadata-preview.xml', handler)
