@@ -109,6 +109,7 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
         self.inWhitelist = False
         self.inInclude = False
         self.includedEntities = set()
+        self.content = ''
 
     def startElement(self, name, attrs):
         if (name.endswith(ShibbolethHandler.METADATA_PROVIDER)
@@ -123,18 +124,20 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
             self.inWhitelist = True
         elif self.inWhitelist and name.endswith(ShibbolethHandler.INCLUDE):
             self.inInclude = True
+            self.content = ''
 
     def endElement(self, name):
         if self.inIncommon and name.endswith(ShibbolethHandler.METADATA_PROVIDER):
             self.inIncommon = False
         elif self.inWhitelist and name.endswith(ShibbolethHandler.METADATA_FILTER):
             self.inWhitelist = False
-        elif self.inInclude and name.endswith(ShibbolethHandler.INCLUDE):
+        elif self.inWhitelist and name.endswith(ShibbolethHandler.INCLUDE):
+            if self.inIncommon:
+                self.includedEntities.add(self.content)
             self.inInclude = False
 
     def characters(self, content):
-        if self.inIncommon and self.inWhitelist and self.inInclude:
-            self.includedEntities.add(content)
+        self.content = self.content + content
 
 
 def sendReport(from_addr, to_addrs, subject, body):
