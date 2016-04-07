@@ -48,10 +48,11 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
     REG_INCOMMON = u'http://id.incommon.org/category/registered-by-incommon'
     HIDE_DISCOVERY = u'http://refeds.org/category/hide-from-discovery'
 
-    def __init__(self):
+    def __init__(self, ignoreList):
         self.currentEntity = None
         self.inAttributeValue = False
         self.includeEntities = set()
+        self.ignoreList = ignoreList
 
     def startElement(self, name, attrs):
         if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
@@ -86,8 +87,14 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
         if self.inAttributeValue:
             self.AVcontent = self.AVcontent + content
 
+    def isIgnored(self, entity):
+        return entity.entityID in self.ignoreList
+
+    def isValidIdP(self, entity):
+        return entity.isValid() and not self.isIgnored(entity)
+
     def closeEntity(self):
-        if self.currentEntity.isValid():
+        if self.isValidIdP(self.currentEntity):
             self.includeEntities.add(self.currentEntity.entityID)
         self.currentEntity = None
 
@@ -177,7 +184,7 @@ def createReport(actual, desired):
 
 
 if __name__ == '__main__':
-    icHandler = InCommonHandler()
+    icHandler = InCommonHandler(['urn:mace:incommon:csun.edu'])
     errorHandler = RaiseErrorHandler()
     xml.sax.parse(sys.argv[1], icHandler, errorHandler)
     shibHandler = ShibbolethHandler()
