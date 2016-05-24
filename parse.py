@@ -1,18 +1,19 @@
+# ----------------------------------------------------------------------
+# To Do:
+#
+# Handle hide-from-discovery IdPs
+# ----------------------------------------------------------------------
+#
+# python parse.py /var/run/shibboleth/InCommon-metadata.xml \
+#                /etc/shibboleth/shibboleth2.xml
+#
+# ----------------------------------------------------------------------
 import smtplib
 import sys
 import xml.sax
 from email.mime.text import MIMEText
 
-#----------------------------------------------------------------------
-# To Do:
-#
-# Handle hide-from-discovery IdPs
-#----------------------------------------------------------------------
-#
-# python parse.py /var/run/shibboleth/InCommon-metadata.xml \
-#                /etc/shibboleth/shibboleth2.xml
-#
-#----------------------------------------------------------------------
+
 class Entity(object):
     def __init__(self, id):
         self.entityID = id
@@ -33,10 +34,13 @@ class RaiseErrorHandler(xml.sax.handler.ErrorHandler):
     """
     def __init__(self):
         pass
+
     def error(self, exception):
         raise exception
+
     def fatalError(self, exception):
         raise exception
+
     def warning(self, exception):
         pass
 
@@ -60,10 +64,10 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
                 print 'ERROR: currentEntity already defined'
             # print 'startElement(%r, %r)' % (name, attrs)
             entityID = attrs.getValue('entityID')
-            #print 'entity: %s' % (entityID)
+            # print 'entity: %s' % (entityID)
             self.currentEntity = Entity(entityID)
         elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
-            #print 'attribute value'
+            # print 'attribute value'
             self.inAttributeValue = True
             self.AVcontent = ''
         elif name.endswith(InCommonHandler.IDP_DESCRIPTOR):
@@ -71,12 +75,14 @@ class InCommonHandler(xml.sax.handler.ContentHandler):
 
     def endElement(self, name):
         if name.endswith(InCommonHandler.ENTITY_DESCRIPTOR):
-            #print 'endElement(%r)' % (name)
+            # print 'endElement(%r)' % (name)
             self.closeEntity()
         elif name.endswith(InCommonHandler.ATTRIBUTE_VALUE):
-            if self.AVcontent and self.AVcontent == InCommonHandler.REG_INCOMMON:
+            if (self.AVcontent and
+                    self.AVcontent == InCommonHandler.REG_INCOMMON):
                 self.currentEntity.isInCommon = True
-            if self.AVcontent and self.AVcontent == InCommonHandler.HIDE_DISCOVERY:
+            if (self.AVcontent and
+                    self.AVcontent == InCommonHandler.HIDE_DISCOVERY):
                 self.currentEntity.hideFromDiscovery = True
             self.AVcontent = ''
             self.inAttributeValue = False
@@ -119,24 +125,26 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
         self.content = ''
 
     def startElement(self, name, attrs):
-        if (name.endswith(ShibbolethHandler.METADATA_PROVIDER)
-            and ShibbolethHandler.ATTR_URI in attrs.getNames()
-            and (attrs.getValue(ShibbolethHandler.ATTR_URI)
-                 == ShibbolethHandler.INCOMMON_URI)):
+        if (name.endswith(ShibbolethHandler.METADATA_PROVIDER) and
+                ShibbolethHandler.ATTR_URI in attrs.getNames() and
+                (attrs.getValue(ShibbolethHandler.ATTR_URI) ==
+                 ShibbolethHandler.INCOMMON_URI)):
             self.inIncommon = True
-        elif (name.endswith(ShibbolethHandler.METADATA_FILTER)
-                and ShibbolethHandler.ATTR_TYPE in attrs.getNames()
-                and (attrs.getValue(ShibbolethHandler.ATTR_TYPE)
-                         == ShibbolethHandler.VALUE_WHITELIST)):
+        elif (name.endswith(ShibbolethHandler.METADATA_FILTER) and
+              ShibbolethHandler.ATTR_TYPE in attrs.getNames() and
+              (attrs.getValue(ShibbolethHandler.ATTR_TYPE) ==
+               ShibbolethHandler.VALUE_WHITELIST)):
             self.inWhitelist = True
         elif self.inWhitelist and name.endswith(ShibbolethHandler.INCLUDE):
             self.inInclude = True
             self.content = ''
 
     def endElement(self, name):
-        if self.inIncommon and name.endswith(ShibbolethHandler.METADATA_PROVIDER):
+        if (self.inIncommon and
+                name.endswith(ShibbolethHandler.METADATA_PROVIDER)):
             self.inIncommon = False
-        elif self.inWhitelist and name.endswith(ShibbolethHandler.METADATA_FILTER):
+        elif (self.inWhitelist and
+              name.endswith(ShibbolethHandler.METADATA_FILTER)):
             self.inWhitelist = False
         elif self.inWhitelist and name.endswith(ShibbolethHandler.INCLUDE):
             if self.inIncommon:
@@ -161,6 +169,7 @@ def sendReport(from_addr, to_addrs, subject, body):
     s = smtplib.SMTP('localhost')
     s.sendmail(from_addr, to_addrs, msg.as_string())
     s.quit()
+
 
 def createReport(actual, desired):
     """Compares the sets actual and desired and reports how actual needs
