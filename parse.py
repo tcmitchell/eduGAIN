@@ -1,12 +1,20 @@
 # ----------------------------------------------------------------------
-# To Do:
+# This program compares the InCommon metadata with the configured
+# identity providers in the shibboleth2.xml and issues a report of
+# what should be added to or removed from shibboleth2.xml to make
+# the set of honored identity providers match.
 #
-# Handle hide-from-discovery IdPs
-# ----------------------------------------------------------------------
+# This hack is necessary because we're running an old version of
+# Shibboleth SP that does not support the configuration options
+# available in later versions to do this automatically.
 #
-# python parse.py /var/run/shibboleth/InCommon-metadata.xml \
+# To run the program:
+#
+#     python parse.py /var/run/shibboleth/InCommon-metadata.xml \
 #                /etc/shibboleth/shibboleth2.xml
 #
+# A report will be emailed with the IdPs to add and remove. A report
+# is issued with "nothing to update" if there are no updates.
 # ----------------------------------------------------------------------
 import smtplib
 import sys
@@ -193,7 +201,12 @@ def createReport(actual, desired):
 
 
 if __name__ == '__main__':
-    icHandler = InCommonHandler(['urn:mace:incommon:csun.edu'])
+    # These identity providers break our Shibboleth SP for an
+    # unknown reason. Manually exclude (ignore) these. We hope
+    # that updating the Shibboleth SP software will make them
+    # work with our system again.
+    ignoreList = ['urn:mace:incommon:csun.edu']
+    icHandler = InCommonHandler(ignoreList)
     errorHandler = RaiseErrorHandler()
     xml.sax.parse(sys.argv[1], icHandler, errorHandler)
     shibHandler = ShibbolethHandler()
