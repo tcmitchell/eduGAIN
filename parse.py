@@ -10,7 +10,7 @@
 #
 # To run the program:
 #
-#     python parse.py /var/run/shibboleth/InCommon-metadata.xml \
+#     python parse.py /var/run/shibboleth/InCommon-metadata-idp-only.xml \
 #                /etc/shibboleth/shibboleth2.xml
 #
 # A report will be emailed with the IdPs to add and remove. A report
@@ -123,7 +123,8 @@ class ShibbolethHandler(xml.sax.handler.ContentHandler):
     ATTR_URI = u'uri'
     ATTR_TYPE = u'type'
     VALUE_WHITELIST = u'Whitelist'
-    INCOMMON_URI = u'http://md.incommon.org/InCommon/InCommon-metadata.xml'
+    INCOMMON_URI = \
+        u'http://md.incommon.org/InCommon/InCommon-metadata-idp-only.xml'
 
     def __init__(self):
         self.inIncommon = False
